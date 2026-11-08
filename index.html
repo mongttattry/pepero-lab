@@ -1264,7 +1264,7 @@ function buildTown(list){
 async function townList(){
   const own=new Set(store.get('pp_owned',[])), v=store.get('pp_visits',{}), mine=store.get('pp_mylabs',[]), seen=new Set(), out=[];
   const info=id=>{ const r=recsOf(id), ok=r.filter(x=>x.tier!=='crash'); return r.length?(ok.length?`최고 ${fmtG(Math.min(...ok.map(x=>x.gap)))}mm`:`실험 ${r.length}회`):'아직 실험 전'; };
-  mine.slice().reverse().forEach(m=>{ if(seen.has(m.id)) return; seen.add(m.id); out.push({id:m.id,h:m.h,n:store.get('pp_name','')||'나',look:store.get('pp_look',null),mine:true}); });
+  const last=mine[mine.length-1]; mine.forEach(m=>seen.add(m.id)); if(last) out.push({id:last.id,h:last.h,n:store.get('pp_name','')||'나',look:store.get('pp_look',null),mine:true});
   Object.entries(v).sort((a,b)=>b[1].t-a[1].t).forEach(([id,e])=>{ if(seen.has(id)||own.has(id)) return; seen.add(id); out.push({id,h:e.h,n:e.n,look:e.look,info:info(id)}); });
   if(await DB.init()){ try{ const pubs=await timeout(DB.listPubs(10),6000); pubs.forEach(p=>{ if(seen.has(p.id)||own.has(p.id)) return; seen.add(p.id); out.push({id:p.id,h:'#lab-'+p.id,n:p.n,pub:true}); }); }catch(e){ console.warn(e); } }
   return out.slice(0,24);
@@ -1929,7 +1929,7 @@ async function hostDone(){
   const lab={id:newId(),n:S.draft.n,m:S.draft.m,look:{...S.draft.look},c:Date.now(),runs:S.draft.runs,p:{...S.hostP}};
   if(await DB.init()){ try{ await DB.createLab(lab); if(S.draft.pub){ DB.setPub(lab,true).then(()=>store.set('pp_pub_'+lab.id,true)).catch(e=>console.warn(e)); } }catch(e){ console.warn(e); toast('서버 연결이 불안정해 오프라인 링크로 저장했어요',2600); } }
   const owned=store.get('pp_owned',[]); owned.push(lab.id); store.set('pp_owned',owned);
-  const hash=labHash(lab); const mine=store.get('pp_mylabs',[]); mine.push({id:lab.id,h:hash}); store.set('pp_mylabs',mine.slice(-10));
+  const hash=labHash(lab); const mine=store.get('pp_mylabs',[]).filter(x=>x.id!==lab.id); mine.push({id:lab.id,h:hash}); store.set('pp_mylabs',mine.slice(-10));
   S.lab=lab; S.viewAs='owner'; if(!hintNext) toast('실험 기록 3건 저장 — 연구실이 열렸어요!',2200);
   S.phase='lab'; location.hash=hash; await showLab(); if(hintNext&&S.phase==='lab') ownerOutro(FLOW); else announceTitles(600);
 }
